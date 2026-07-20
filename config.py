@@ -9,7 +9,7 @@ configure the app when it's deployed. Locally, the defaults below are used.
 import os
 
 # --- Your Google Wallet credentials -----------------------------------------
-ISSUER_ID = os.getenv("ISSUER_ID", "3388000000022XXXXXX")   # your numeric Issuer ID
+ISSUER_ID = os.getenv("ISSUER_ID", "3388000000023152461")   # your numeric Issuer ID
 KEY_FILE = os.getenv("KEY_FILE", "service-account-key.json")  # local key file path
 
 # When deployed, set the key's JSON *contents* in the GOOGLE_WALLET_KEY_JSON
