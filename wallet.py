@@ -21,6 +21,11 @@ SCOPES = ["https://www.googleapis.com/auth/wallet_object.issuer"]
 API = "https://walletobjects.googleapis.com/walletobjects/v1"
 SAVE = "https://pay.google.com/gp/v/save/"
 
+# Card images (stamp banner, logo) are served by this app, so they only work
+# when it's reachable over public HTTPS (i.e. deployed). Locally, we skip them
+# so enrollment still works — Google rejects unreachable/localhost image URLs.
+_IMAGES_PUBLIC = config.BASE_URL.startswith("https://")
+
 # Load the service-account key. When deployed, put the key's JSON contents in the
 # GOOGLE_WALLET_KEY_JSON environment variable (a host secret). Locally, it falls
 # back to reading the file at config.KEY_FILE.
@@ -82,6 +87,10 @@ def ensure_class(store: dict) -> str:
             raise RuntimeError(f"Creating class failed: {resp.status_code} {resp.text}")
         print(f"[wallet] Created class: {class_id}")
     elif resp.status_code == 200:
+        if not _IMAGES_PUBLIC:
+            # Running locally: don't overwrite the deployed class with localhost
+            # image URLs. The existing (deployed) class already has the logo.
+            return class_id
         resp = _session.patch(f"{API}/loyaltyClass/{class_id}", json=body)
         if not resp.ok:
             raise RuntimeError(f"Updating class failed: {resp.status_code} {resp.text}")
@@ -96,14 +105,16 @@ def _stamp_fields(store: dict, stamps: int) -> dict:
     """The loyaltyPoints, progress dots, and stamp-banner hero image for a card."""
     goal = store["reward_goal"]
     stamps = max(0, min(stamps, goal))
-    hero = {
-        "heroImage": {
-            "sourceUri": {"uri": f"{config.BASE_URL}/store/{store['id']}/stamp/{stamps}"},
-            "contentDescription": {
-                "defaultValue": {"language": "en-US", "value": f"{stamps} of {goal} stamps"}
-            },
+    hero = {}
+    if _IMAGES_PUBLIC:
+        hero = {
+            "heroImage": {
+                "sourceUri": {"uri": f"{config.BASE_URL}/store/{store['id']}/stamp/{stamps}"},
+                "contentDescription": {
+                    "defaultValue": {"language": "en-US", "value": f"{stamps} of {goal} stamps"}
+                },
+            }
         }
-    }
     if stamps >= goal:
         return {
             "loyaltyPoints": {"label": "Reward", "balance": {"string": "READY"}},
