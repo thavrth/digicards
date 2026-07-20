@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+google-auth
+requests
+pyjwt>=2.0
+Pillow
