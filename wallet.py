@@ -7,6 +7,7 @@ loyalty class (card template). Functions take a `store` dict from stores.py.
     save_link(store, suffix)                  -> the "Add to Google Wallet" URL
 """
 
+import base64
 import json
 import os
 import time
@@ -26,11 +27,15 @@ SAVE = "https://pay.google.com/gp/v/save/"
 # so enrollment still works — Google rejects unreachable/localhost image URLs.
 _IMAGES_PUBLIC = config.BASE_URL.startswith("https://")
 
-# Load the service-account key. When deployed, put the key's JSON contents in the
-# GOOGLE_WALLET_KEY_JSON environment variable (a host secret). Locally, it falls
-# back to reading the file at config.KEY_FILE.
+# Load the service-account key. When deployed, set GOOGLE_WALLET_KEY_JSON to the
+# key's JSON contents OR its base64-encoded form (base64 is safer — env vars
+# often mangle the newlines in the private key). Locally, falls back to the file.
 _raw_key = os.getenv("GOOGLE_WALLET_KEY_JSON")
 if _raw_key:
+    _raw_key = _raw_key.strip()
+    if not _raw_key.startswith("{"):
+        # Not raw JSON, so treat it as base64 and decode it.
+        _raw_key = base64.b64decode(_raw_key).decode("utf-8")
     _key = json.loads(_raw_key)
     _credentials = Credentials.from_service_account_info(_key, scopes=SCOPES)
 else:
